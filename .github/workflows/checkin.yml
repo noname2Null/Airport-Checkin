@@ -42,5 +42,6 @@ jobs:
           BASE_URL: ${{ secrets.BASE_URL }}
           TGBOT: ${{ secrets.TGBOT }}
           TGUSERID: ${{ secrets.TGUSERID }}
+          SHOP_ID: ${{ secrets.SHOP_ID }}
         run: |
           python3 ./main.py

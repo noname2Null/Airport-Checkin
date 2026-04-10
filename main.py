@@ -7,7 +7,7 @@ from datetime import datetime
 SCKEY = os.environ.get('SCKEY', '')
 TG_BOT_TOKEN = os.environ.get('TGBOT', '')
 TG_USER_ID = os.environ.get('TGUSERID', '')
-SHOP_ID = os.environ.get('SHOP_ID')          # 必须设置为 8
+SHOP_ID = os.environ.get('SHOP_ID')          # 必须为 8
 
 def push(title, desp):
     scraper = cloudscraper.create_scraper()
@@ -26,21 +26,16 @@ def push(title, desp):
             pass
 
 def checkin(scraper, base_url, email, password):
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Referer': base_url + '/auth/login'
-    }
-    # 登录
-    login_resp = scraper.post(base_url + '/auth/login', data={'email': email, 'passwd': password, 'code': ''}, headers=headers, timeout=15)
-    # 签到
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+    # 登录 + 签到
+    scraper.post(base_url + '/auth/login', data={'email': email, 'passwd': password, 'code': ''}, headers=headers, timeout=15)
     checkin_resp = scraper.post(base_url + '/user/checkin', headers=headers, timeout=15)
-
     try:
         result = json.loads(checkin_resp.text)
         msg = result.get('msg', '未知')
         return f"签到成功：{msg}"
     except:
-        return "签到失败（可能登录未成功）"
+        return "签到失败（登录可能失败）"
 
 def auto_buy(scraper, base_url):
     if not SHOP_ID:
@@ -54,8 +49,7 @@ def auto_buy(scraper, base_url):
         )
         try:
             result = json.loads(buy_resp.text)
-            msg = result.get('msg', buy_resp.text[:200])
-            return msg
+            return result.get('msg', buy_resp.text[:200])
         except:
             return buy_resp.text[:200]
     except Exception as e:
@@ -72,19 +66,18 @@ if __name__ == "__main__":
     sign_result = checkin(scraper, base_url, email, password)
     buy_result = auto_buy(scraper, base_url)
 
-    # 构建你想要的推送标题
+    # 构建你要求的纯中文标题
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
-    sign_ok = "√" if "成功" in sign_result else "×"
+    sign_status = "签到成功" if "成功" in sign_result else "签到失败"
     
-    # 购买状态判断（更精准）
     if "成功" in buy_result or "订单" in buy_result or "已购买" in buy_result:
-        buy_ok = "√"
+        buy_status = "购买成功"
     elif "间隔" in buy_result or "24" in buy_result or "不足" in buy_result or "冷却" in buy_result:
-        buy_ok = "×(间隔不足)"
+        buy_status = "购买失败(间隔不足)"
     else:
-        buy_ok = "×"
+        buy_status = "购买失败"
 
-    title = f"签到{sign_ok} 购买{buy_ok} {now}"
+    title = f"{sign_status}|{buy_status} {now}"
     desp = f"签到结果：{sign_result}\n购买结果：{buy_result}\n执行时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
     print(f"\n🚀 最终推送标题：{title}")
